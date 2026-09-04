@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Kali Ethical Toolkit</title>
+<style>
+  :root {
+    --bg:     #0d0f14;
+    --panel:  #13161e;
+    --border: #1e2330;
+    --accent: #00e5ff;
+    --green:  #00ff88;
+    --red:    #ff4466;
+    --yellow: #ffd700;
+    --muted:  #4a5568;
+    --text:   #c9d1e0;
+    --dim:    #6b7280;
+    --font:   'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--font); font-size: 13px; min-height: 100vh; }
+
+  /* ── Login ── */
+  #login-screen {
+    display: flex; align-items: center; justify-content: center;
+    min-height: 100vh; flex-direction: column; gap: 32px;
+  }
+  .login-box {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 8px; padding: 40px; width: 360px;
+  }
+  .login-logo { text-align: center; margin-bottom: 28px; }
+  .login-logo .skull { font-size: 48px; }
+  .login-logo h1 { font-size: 18px; color: var(--accent); letter-spacing: 2px; margin-top: 8px; }
+  .login-logo p { color: var(--dim); font-size: 11px; margin-top: 4px; }
+  .field { margin-bottom: 16px; }
+  .field label { display: block; color: var(--dim); font-size: 11px; margin-bottom: 6px; letter-spacing: 1px; text-transform: uppercase; }
+  .field input {
+    width: 100%; background: var(--bg); border: 1px solid var(--border);
+    color: var(--text); padding: 10px 12px; border-radius: 4px; font-family: var(--font); font-size: 13px;
+    outline: none; transition: border-color .2s;
+  }
+  .field input:focus { border-color: var(--accent); }
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--accent); color: #000; border: none; padding: 10px 20px;
+    border-radius: 4px; font-family: var(--font); font-size: 13px; font-weight: 700;
+    cursor: pointer; transition: opacity .15s;
+  }
+  .btn:hover { opacity: .85; }
+  .btn.full { width: 100%; justify-content: center; }
+  .btn.danger { background: var(--red); color: #fff; }
+  .btn.ghost { background: transparent; border: 1px solid var(--border); color: var(--text); }
+  .btn.ghost:hover { border-color: var(--accent); color: var(--accent); }
+  .err-msg { color: var(--red); font-size: 12px; margin-top: 10px; text-align: center; }
+
+  /* ── App Shell ── */
+  #app { display: none; flex-direction: column; min-height: 100vh; }
+  header {
+    background: var(--panel); border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 24px; height: 52px; flex-shrink: 0;
+  }
+  .header-brand { display: flex; align-items: center; gap: 10px; }
+  .header-brand .logo { color: var(--accent); font-size: 16px; font-weight: 700; letter-spacing: 1px; }
+  .header-brand .badge {
+    background: rgba(0,229,255,.1); border: 1px solid rgba(0,229,255,.3);
+    color: var(--accent); font-size: 10px; padding: 2px 8px; border-radius: 99px; letter-spacing: 1px;
+  }
+  .header-right { display: flex; align-items: center; gap: 16px; }
+  .user-pill {
+    background: rgba(0,255,136,.08); border: 1px solid rgba(0,255,136,.2);
+    color: var(--green); padding: 4px 12px; border-radius: 99px; font-size: 11px;
+  }
+
+  /* ── Layout ── */
+  .main-layout { display: flex; flex: 1; overflow: hidden; }
+  nav {
+    width: 200px; background: var(--panel); border-right: 1px solid var(--border);
+    padding: 16px 0; flex-shrink: 0; display: flex; flex-direction: column; gap: 2px;
+  }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 20px; cursor: pointer; border-left: 3px solid transparent;
+    color: var(--dim); transition: all .15s; font-size: 12px; letter-spacing: .5px;
+  }
+  .nav-item:hover { color: var(--text); background: rgba(255,255,255,.03); }
+  .nav-item.active { color: var(--accent); border-left-color: var(--accent); background: rgba(0,229,255,.05); }
+  .nav-divider { height: 1px; background: var(--border); margin: 8px 16px; }
+
+  /* ── Content ── */
+  .content { flex: 1; overflow-y: auto; padding: 24px; }
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 6px; padding: 20px; margin-bottom: 16px;
+  }
+  .card-title {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px;
+    color: var(--dim); margin-bottom: 16px; display: flex; align-items: center; gap: 8px;
+  }
+  .card-title .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+
+  /* ── Form Controls ── */
+  .form-row { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-group label { font-size: 11px; color: var(--dim); letter-spacing: .5px; }
+  input[type=text], input[type=number], select {
+    background: var(--bg); border: 1px solid var(--border);
+    color: var(--text); padding: 8px 12px; border-radius: 4px;
+    font-family: var(--font); font-size: 13px; outline: none; transition: border-color .2s;
+    min-width: 200px;
+  }
+  input[type=text]:focus, select:focus { border-color: var(--accent); }
+  select { cursor: pointer; }
+  select option { background: var(--panel); }
+
+  /* ── Terminal Output ── */
+  .terminal {
+    background: #080a0f; border: 1px solid var(--border); border-radius: 4px;
+    padding: 16px; font-family: var(--font); font-size: 12px; line-height: 1.7;
+    max-height: 420px; overflow-y: auto; white-space: pre-wrap; word-break: break-all;
+    margin-top: 16px;
+  }
+  .terminal .t-prompt { color: var(--green); }
+  .terminal .t-cmd    { color: var(--text); }
+  .terminal .t-ok     { color: var(--green); }
+  .terminal .t-warn   { color: var(--yellow); }
+  .terminal .t-err    { color: var(--red); }
+  .terminal .t-info   { color: var(--accent); }
+  .terminal .t-dim    { color: var(--muted); }
+  .terminal .t-header { color: var(--accent); font-weight: bold; }
+
+  /* ── Results Table ── */
+  .result-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 12px; }
+  .result-table th {
+    text-align: left; padding: 8px 12px; font-size: 10px; text-transform: uppercase;
+    letter-spacing: 1px; color: var(--dim); border-bottom: 1px solid var(--border);
+  }
+  .result-table td { padding: 8px 12px; border-bottom: 1px solid rgba(30,35,48,.5); }
+  .result-table tr:last-child td { border-bottom: none; }
+  .result-table tr:hover td { background: rgba(255,255,255,.02); }
+  .badge-open   { background: rgba(0,255,136,.15); color: var(--green); padding: 2px 8px; border-radius: 3px; font-size: 11px; }
+  .badge-closed { background: rgba(255,68,102,.1);  color: var(--red);   padding: 2px 8px; border-radius: 3px; font-size: 11px; }
+  .badge-filter { background: rgba(255,215,0,.1);   color: var(--yellow);padding: 2px 8px; border-radius: 3px; font-size: 11px; }
+
+  /* ── Stats Bar ── */
+  .stats-row { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
+  .stat-box {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 6px; padding: 14px 20px; flex: 1; min-width: 120px;
+  }
+  .stat-box .val { font-size: 28px; font-weight: 700; color: var(--accent); }
+  .stat-box .lbl { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--dim); margin-top: 2px; }
+
+  /* ── Loading ── */
+  .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .6s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Audit Log ── */
+  .log-entry { display: flex; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 12px; }
+  .log-ts   { color: var(--dim); flex-shrink: 0; }
+  .log-user { color: var(--green); flex-shrink: 0; min-width: 70px; }
+  .log-type { color: var(--accent); flex-shrink: 0; min-width: 100px; }
+  .log-tgt  { color: var(--text); }
+
+  /* ── Vuln Alerts ── */
+  .vuln-item { background: rgba(255,68,102,.08); border: 1px solid rgba(255,68,102,.2); border-radius: 4px; padding: 8px 12px; margin: 4px 0; font-size: 12px; color: var(--red); }
+  .info-item { background: rgba(0,229,255,.06); border: 1px solid rgba(0,229,255,.15); border-radius: 4px; padding: 8px 12px; margin: 4px 0; font-size: 12px; color: var(--accent); }
+
+  /* ── Raw Toggle ── */
+  .raw-toggle { font-size: 11px; color: var(--dim); cursor: pointer; text-decoration: underline; margin-top: 8px; display: inline-block; }
+  .raw-toggle:hover { color: var(--accent); }
+  .raw-section { display: none; }
+  .raw-section.visible { display: block; }
+
+  /* ── DNS Records ── */
+  .dns-record-type { color: var(--yellow); font-weight: 700; min-width: 60px; display: inline-block; }
+  .dns-value { color: var(--text); }
+
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════ LOGIN ═══════════════════════════════════ -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">
+      <div class="skull">☠</div>
+      <h1>KALI ETHICAL TOOLKIT</h1>
+      <p>Authorised Personnel Only</p>
+    </div>
+    <div class="field">
+      <label>Username</label>
+      <input id="l-user" type="text" placeholder="admin" autocomplete="username"/>
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input id="l-pass" type="password" placeholder="••••••••••" autocomplete="current-password"/>
+    </div>
+    <button class="btn full" onclick="doLogin()">⚡ AUTHENTICATE</button>
+    <div id="login-err" class="err-msg"></div>
+  </div>
+  <div style="color:var(--dim);font-size:11px;text-align:center;">
+    Default: admin / KaliAdmin2024! &nbsp;|&nbsp; analyst / Analyst#Sec99
+  </div>
+</div>
+
+<!-- ═════════════════════════════════ APP ══════════════════════════════════ -->
+<div id="app">
+  <header>
+    <div class="header-brand">
+      <span style="color:var(--accent);font-size:20px;">☠</span>
+      <span class="logo">KALI ETHICAL TOOLKIT</span>
+      <span class="badge">AUTHORISED USE ONLY</span>
+    </div>
+    <div class="header-right">
+      <span class="user-pill">● <span id="hdr-user">-</span></span>
+      <button class="btn ghost" onclick="doLogout()" style="padding:6px 14px;font-size:12px;">LOGOUT</button>
+    </div>
+  </header>
+
+  <div class="main-layout">
+    <nav>
+      <div class="nav-item active" data-page="dashboard" onclick="showPage(this)">
+        📊 Dashboard
+      </div>
+      <div class="nav-divider"></div>
+      <div class="nav-item" data-page="ping"    onclick="showPage(this)">📡 Host Discovery</div>
+      <div class="nav-item" data-page="ports"   onclick="showPage(this)">🔌 Port Scan</div>
+      <div class="nav-item" data-page="service" onclick="showPage(this)">🔍 Service Probe</div>
+      <div class="nav-item" data-page="dns"     onclick="showPage(this)">🌐 DNS Enum</div>
+      <div class="nav-item" data-page="whois"   onclick="showPage(this)">📋 WHOIS</div>
+      <div class="nav-item" data-page="ssl"     onclick="showPage(this)">🔒 SSL/TLS</div>
+      <div class="nav-item" data-page="os"      onclick="showPage(this)">💻 OS Detect</div>
+      <div class="nav-divider"></div>
+      <div class="nav-item" data-page="log"     onclick="showPage(this)">📝 Audit Log</div>
+    </nav>
+
+    <div class="content">
+
+      <!-- ── Dashboard ── -->
+      <div id="page-dashboard" class="page active">
+        <div class="card">
+          <div class="card-title"><span class="dot"></span> SESSION OVERVIEW</div>
+          <div class="stats-row" id="dash-stats">
+            <div class="stat-box"><div class="val" id="stat-total">0</div><div class="lbl">Total Scans</div></div>
+            <div class="stat-box"><div class="val" id="stat-hosts">0</div><div class="lbl">Hosts Scanned</div></div>
+            <div class="stat-box"><div class="val" id="stat-vulns">0</div><div class="lbl">Vulnerabilities Found</div></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot"></span> QUICK START</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:4px;">
+            <div class="info-item" onclick="navTo('ping')" style="cursor:pointer;">📡 Discover live hosts on a network</div>
+            <div class="info-item" onclick="navTo('ports')" style="cursor:pointer;">🔌 Scan open ports on a target</div>
+            <div class="info-item" onclick="navTo('service')" style="cursor:pointer;">🔍 Detect services &amp; vulnerabilities</div>
+            <div class="info-item" onclick="navTo('dns')" style="cursor:pointer;">🌐 Enumerate DNS records &amp; subdomains</div>
+            <div class="info-item" onclick="navTo('whois')" style="cursor:pointer;">📋 WHOIS registration lookup</div>
+            <div class="info-item" onclick="navTo('ssl')" style="cursor:pointer;">🔒 Audit SSL/TLS certificates &amp; ciphers</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="dot"></span> RECENT ACTIVITY</div>
+          <div id="dash-recent" style="color:var(--dim);font-size:12px;">No scans this session.</div>
+        </div>
+      </div>
+
+      <!-- ── Ping ── -->
+      <div id="page-ping" class="page">
+        <div class="card">
+          <div class="card-title"><span class="dot"></span> HOST DISCOVERY — PING SCAN</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Target (IP, range, or CIDR)</label>
+              <input id="ping-target" type="text" placeholder="192.168.1.0/24 or 10.0.0.1"/>
+            </div>
+            <button class="btn" id="ping-btn" onclick="runPing()">▶ RUN SCAN</button>
+          </div>
+          <div id="ping-result" style="margin-top:16px;"></div>
+        </div>
+      </div>
+
+      <!-- ── Ports ── -->
+      <div id="page-ports" class="page">
+        <div class="card">
+          <div class="card-title"><span class="dot"></span> PORT SCAN (nmap)</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Target</label>
+              <input id="ports-target" type="text" placeholder="192.168.1.10 or example.com"/>
+            </div>
+            <div class="form-group">
+              <label>Scan Type</label>
+              <select id="ports-type">
+                <option value="quick">Quick (-F top 100)</option>
+                <option value="full">Full (-p- all 65535)</option>
+                <option value="udp">UDP (top 100)</option>
+              </select>
+            </div>
+            <button class="btn" id="ports-btn" onclick="runPorts()">▶ RUN SCAN</button>
+          </div>
+          <div id="ports-result" style="margin-top:16px;"></div>
+        </div>
+      </div>
+
+      <!-- ── Service ── -->
+      <div id="page-service" class="page">
+        <div class="card">
+          <div class="card-title"><span class="dot"></span> SERVICE & VULNERABILITY PROBE</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Target</label>
+              <input id="svc-target" type="text" placeholder="192.168.1.10"/>
+            </div>
+            <div class="form-group">
+              <label>Ports</label>
+              <input id="svc-ports" type="text" placeholder="22,80,443,8080,3306" value="22,80,443,8080,3306,5432"/>
+            </div>
+            <button class="btn" id="svc-btn" onclick="runService()">▶ PROBE</button>
+          </div>
+          <div id="svc-result" style="margin-top:16px;"></div>
+        </div>
+      </div>
+
+      <!-- ── DNS ── -->
+      <div id="page-dns" class="page">
+        <div class="card">
+          <div class="card-title"><span class="dot"></span> DNS ENUMERATION</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Domain</label>
+              <input id="dns-target" type="text" placeholder="example.com"/>
+            </div>
+            <button class="btn" id="dns-btn" onclick="runDns()">▶ ENUMERATE</button>
+          </div>
+          <div id="dns-result" style="margin-top:16px;"></div>
+        </div>
+      </div>
+
+      <!-- ── WHOIS ── -->
+      <div id="page-whois" class="page">
+        <div class="card">
+          <div class="card-title"><span class="dot"></span> WHOIS LOOKUP</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Domain or IP</label>
+              <input id="whois-target" type="text" placeholder="example.com or 8.8.8.8"/>
+            </div>
+            <button class="btn" id="whois-btn" onclick="runWhois()">▶ LOOKUP</button>
+          </div>
+          <div id="whois-result" style="margin-top:16px;"></div>
+        </div>
+      </div>
+
+      <!-- ── SSL ── -->
+      <div id="page-ssl" class="page">
+        <div class="card">
+          <div class="card-title"><span class="dot"></span> SSL/TLS CERTIFICATE AUDIT</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Host</label>
+              <input id="ssl-target" type="text" placeholder="example.com"/>
+            </div>
+            <div class="form-group">
+              <label>Port</label>
+              <input id="ssl-port" type="number" placeholder="443" value="443" style="min-width:80px;max-width:100px;"/>
+            </div>
+            <button class="btn" id="ssl-btn" onclick="runSsl()">▶ AUDIT</button>
+          </div>
+          <div id="ssl-result" style="margin-top:16px;"></div>
+        </div>
+      </div>
+
+      <!-- ── OS ── -->
+      <div id="page-os" class="page">
+        <div class="card">
+          <div class="card-title"><span class="dot"></span> OS DETECTION</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Target</label>
+              <input id="os-target" type="text" placeholder="192.168.1.10"/>
+            </div>
+            <button class="btn" id="os-btn" onclick="runOs()">▶ DETECT</button>
+          </div>
+          <p style="color:var(--dim);font-size:11px;margin-top:10px;">⚠ Requires root on the backend host for accurate OS fingerprinting.</p>
+          <div id="os-result" style="margin-top:16px;"></div>
+        </div>
+      </div>
+
+      <!-- ── Log ── -->
+      <div id="page-log" class="page">
+        <div class="card">
+          <div class="card-title"><span class="dot"></span> AUDIT LOG</div>
+          <button class="btn ghost" onclick="loadLog()" style="padding:6px 14px;font-size:12px;margin-bottom:12px;">↻ REFRESH</button>
+          <div id="log-content" style="color:var(--dim);font-size:12px;">Loading...</div>
+        </div>
+      </div>
+
+    </div><!-- /content -->
+  </div><!-- /main-layout -->
+</div><!-- /app -->
+
+<script>
+const API = 'http://127.0.0.1:5050/api';
+let TOKEN = null, CURRENT_USER = null;
+let scanStats = { total: 0, hosts: 0, vulns: 0 };
+let recentScans = [];
+
+// ── Auth ─────────────────────────────────────────────────────────────────────
+async function doLogin() {
+  const u = document.getElementById('l-user').value.trim();
+  const p = document.getElementById('l-pass').value;
+  const err = document.getElementById('login-err');
+  err.textContent = '';
+  try {
+    const r = await fetch(`${API}/login`, {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ username: u, password: p })
+    });
+    const d = await r.json();
+    if (!r.ok) { err.textContent = d.error || 'Login failed'; return; }
+    TOKEN = d.token; CURRENT_USER = d.user;
+    document.getElementById('hdr-user').textContent = CURRENT_USER;
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'flex';
+  } catch(e) {
+    err.textContent = 'Cannot reach backend (http://127.0.0.1:5050). Start backend/app.py first.';
+  }
+}
+
+async function doLogout() {
+  if (TOKEN) await fetch(`${API}/logout`, { method:'POST', headers:{'X-Auth-Token':TOKEN} }).catch(()=>{});
+  TOKEN = null; CURRENT_USER = null;
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('l-pass').value = '';
+}
+
+document.getElementById('l-pass').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+
+// ── Navigation ────────────────────────────────────────────────────────────────
+function showPage(el) {
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('page-' + el.dataset.page).classList.add('active');
+  if (el.dataset.page === 'log') loadLog();
+  if (el.dataset.page === 'dashboard') updateDash();
+}
+function navTo(page) {
+  const el = document.querySelector(`[data-page="${page}"]`);
+  if (el) showPage(el);
+}
+
+// ── API Helper ────────────────────────────────────────────────────────────────
+async function apicall(endpoint, body) {
+  const r = await fetch(`${API}${endpoint}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Auth-Token': TOKEN },
+    body: JSON.stringify(body)
+  });
+  return [await r.json(), r.ok];
+}
+
+function setLoading(btnId, loading) {
+  const btn = document.getElementById(btnId);
+  if (loading) {
+    btn._orig = btn.innerHTML;
+    btn.innerHTML = '<span class="spinner"></span> SCANNING...';
+    btn.disabled = true;
+  } else {
+    btn.innerHTML = btn._orig;
+    btn.disabled = false;
+  }
+}
+
+// ── Stats ─────────────────────────────────────────────────────────────────────
+function bumpStats(type, extra={}) {
+  scanStats.total++;
+  if (extra.hosts) scanStats.hosts += extra.hosts;
+  if (extra.vulns) scanStats.vulns += extra.vulns;
+  recentScans.unshift({ type, ...extra, ts: new Date().toLocaleTimeString() });
+  if (recentScans.length > 10) recentScans.pop();
+  updateDash();
+}
+
+function updateDash() {
+  document.getElementById('stat-total').textContent = scanStats.total;
+  document.getElementById('stat-hosts').textContent = scanStats.hosts;
+  document.getElementById('stat-vulns').textContent = scanStats.vulns;
+  if (recentScans.length > 0) {
+    document.getElementById('dash-recent').innerHTML = recentScans.map(s =>
+      `<div class="log-entry"><span class="log-ts">${s.ts}</span><span class="log-type">${s.type}</span><span class="log-tgt">${s.target || ''}</span></div>`
+    ).join('');
+  }
+}
+
+// ── Raw Toggle ─────────────────────────────────────────────────────────────────
+function toggleRaw(id) {
+  const el = document.getElementById(id);
+  el.classList.toggle('visible');
+}
+
+function rawBlock(id, raw) {
+  return `<span class="raw-toggle" onclick="toggleRaw('${id}')">[ toggle raw output ]</span>
+<div id="${id}" class="raw-section terminal">${escHtml(raw)}</div>`;
+}
+
+function escHtml(s) {
+  return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function portBadge(state) {
+  if (state === 'open')     return `<span class="badge-open">${state}</span>`;
+  if (state === 'closed')   return `<span class="badge-closed">${state}</span>`;
+  return `<span class="badge-filter">${state}</span>`;
+}
+
+// ── PING ──────────────────────────────────────────────────────────────────────
+async function runPing() {
+  const target = document.getElementById('ping-target').value.trim();
+  if (!target) return;
+  const out = document.getElementById('ping-result');
+  setLoading('ping-btn', true);
+  out.innerHTML = '<div class="terminal"><span class="t-info">Running host discovery...</span></div>';
+  try {
+    const [d, ok] = await apicall('/scan/ping', { target });
+    if (!ok) { out.innerHTML = `<div class="terminal t-err">${escHtml(d.error)}</div>`; return; }
+    bumpStats('ping', { target, hosts: d.hosts_up });
+
+    let html = `<div class="stats-row">
+      <div class="stat-box"><div class="val" style="font-size:22px;">${d.hosts_up}</div><div class="lbl">Hosts Up</div></div>
+      <div class="stat-box"><div class="val" style="font-size:18px;color:var(--dim);">${escHtml(target)}</div><div class="lbl">Target Range</div></div>
+    </div>`;
+
+    if (d.hosts.length > 0) {
+      html += `<table class="result-table">
+        <tr><th>Hostname</th><th>IP</th><th>Status</th><th>Latency</th><th>MAC</th></tr>
+        ${d.hosts.map(h => `<tr>
+          <td>${escHtml(h.hostname)}</td>
+          <td style="color:var(--accent)">${escHtml(h.ip)}</td>
+          <td><span class="badge-open">up</span></td>
+          <td>${h.latency_ms != null ? h.latency_ms + ' ms' : '—'}</td>
+          <td style="color:var(--dim)">${escHtml(h.mac||'—')}</td>
+        </tr>`).join('')}
+      </table>`;
+    } else {
+      html += `<div class="info-item">No live hosts found in range.</div>`;
+    }
+    html += rawBlock('ping-raw', d.raw);
+    out.innerHTML = html;
+  } catch(e) {
+    out.innerHTML = `<div class="terminal"><span class="t-err">Error: ${escHtml(e.message)}</span></div>`;
+  } finally { setLoading('ping-btn', false); }
+}
+
+// ── PORTS ─────────────────────────────────────────────────────────────────────
+async function runPorts() {
+  const target = document.getElementById('ports-target').value.trim();
+  const type   = document.getElementById('ports-type').value;
+  if (!target) return;
+  const out = document.getElementById('ports-result');
+  setLoading('ports-btn', true);
+  out.innerHTML = '<div class="terminal"><span class="t-info">Running port scan — this may take a moment...</span></div>';
+  try {
+    const [d, ok] = await apicall('/scan/ports', { target, type });
+    if (!ok) { out.innerHTML = `<div class="terminal"><span class="t-err">${escHtml(d.error)}</span></div>`; return; }
+    const openPorts = d.ports.filter(p => p.state === 'open');
+    bumpStats('ports', { target, hosts: 1 });
+
+    let html = `<div class="stats-row">
+      <div class="stat-box"><div class="val" style="font-size:22px;">${openPorts.length}</div><div class="lbl">Open Ports</div></div>
+      <div class="stat-box"><div class="val" style="font-size:22px;">${d.ports.length}</div><div class="lbl">Total Probed</div></div>
+      ${d.os_guess ? `<div class="stat-box"><div class="val" style="font-size:13px;color:var(--yellow)">${escHtml(d.os_guess)}</div><div class="lbl">OS Guess</div></div>` : ''}
+    </div>`;
+
+    if (d.ports.length > 0) {
+      html += `<table class="result-table">
+        <tr><th>Port</th><th>Protocol</th><th>State</th><th>Service</th><th>Version</th></tr>
+        ${d.ports.map(p => `<tr>
+          <td style="color:var(--accent);font-weight:700">${p.port}</td>
+          <td style="color:var(--dim)">${p.protocol}</td>
+          <td>${portBadge(p.state)}</td>
+          <td>${escHtml(p.service)}</td>
+          <td style="color:var(--dim)">${escHtml(p.version||'—')}</td>
+        </tr>`).join('')}
+      </table>`;
+    } else {
+      html += `<div class="info-item">No ports found matching the filter.</div>`;
+    }
+    html += rawBlock('ports-raw', d.raw);
+    out.innerHTML = html;
+  } catch(e) {
+    out.innerHTML = `<div class="terminal"><span class="t-err">Error: ${escHtml(e.message)}</span></div>`;
+  } finally { setLoading('ports-btn', false); }
+}
+
+// ── SERVICE ───────────────────────────────────────────────────────────────────
+async function runService() {
+  const target = document.getElementById('svc-target').value.trim();
+  const ports  = document.getElementById('svc-ports').value.trim();
+  if (!target) return;
+  const out = document.getElementById('svc-result');
+  setLoading('svc-btn', true);
+  out.innerHTML = '<div class="terminal"><span class="t-info">Probing services and checking for vulnerabilities...</span></div>';
+  try {
+    const [d, ok] = await apicall('/scan/service', { target, ports });
+    if (!ok) { out.innerHTML = `<div class="terminal"><span class="t-err">${escHtml(d.error)}</span></div>`; return; }
+    bumpStats('service', { target, hosts: 1, vulns: d.vulnerabilities.length });
+
+    let html = `<div class="stats-row">
+      <div class="stat-box"><div class="val" style="font-size:22px;">${d.services.filter(s=>s.state==='open').length}</div><div class="lbl">Open Services</div></div>
+      <div class="stat-box"><div class="val" style="font-size:22px;color:${d.vulnerabilities.length?'var(--red)':'var(--green)'}">${d.vulnerabilities.length}</div><div class="lbl">Vulns Found</div></div>
+    </div>`;
+
+    if (d.services.length > 0) {
+      html += `<table class="result-table">
+        <tr><th>Port</th><th>State</th><th>Service</th><th>Version</th><th>CPE</th></tr>
+        ${d.services.map(s => `<tr>
+          <td style="color:var(--accent);font-weight:700">${s.port}/${s.protocol}</td>
+          <td>${portBadge(s.state)}</td>
+          <td>${escHtml(s.service)}</td>
+          <td style="color:var(--dim)">${escHtml(s.version||'—')}</td>
+          <td style="color:var(--muted);font-size:11px">${escHtml(s.cpe||'—')}</td>
+        </tr>`).join('')}
+      </table>`;
+    }
+
+    if (d.vulnerabilities.length > 0) {
+      html += `<div style="margin-top:16px;"><div class="card-title"><span class="dot" style="background:var(--red)"></span> VULNERABILITIES DETECTED</div>`;
+      html += d.vulnerabilities.map(v => `<div class="vuln-item">⚠ ${escHtml(v)}</div>`).join('');
+      html += '</div>';
+    }
+    html += rawBlock('svc-raw', d.raw);
+    out.innerHTML = html;
+  } catch(e) {
+    out.innerHTML = `<div class="terminal"><span class="t-err">Error: ${escHtml(e.message)}</span></div>`;
+  } finally { setLoading('svc-btn', false); }
+}
+
+// ── DNS ───────────────────────────────────────────────────────────────────────
+async function runDns() {
+  const target = document.getElementById('dns-target').value.trim();
+  if (!target) return;
+  const out = document.getElementById('dns-result');
+  setLoading('dns-btn', true);
+  out.innerHTML = '<div class="terminal"><span class="t-info">Enumerating DNS records...</span></div>';
+  try {
+    const [d, ok] = await apicall('/scan/dns', { target });
+    if (!ok) { out.innerHTML = `<div class="terminal"><span class="t-err">${escHtml(d.error)}</span></div>`; return; }
+    bumpStats('dns', { target });
+
+    let html = '';
+    const types = Object.keys(d.records);
+    if (types.length > 0) {
+      html += `<div style="margin-bottom:16px;">`;
+      html += `<div class="card-title"><span class="dot"></span> DNS RECORDS</div>`;
+      types.forEach(t => {
+        d.records[t].forEach(v => {
+          html += `<div style="padding:5px 0;border-bottom:1px solid var(--border);">
+            <span class="dns-record-type">${t}</span>
+            <span class="dns-value">${escHtml(v)}</span>
+          </div>`;
+        });
+      });
+      html += '</div>';
+    }
+
+    if (d.subdomains && d.subdomains.length > 0) {
+      html += `<div class="card-title" style="margin-top:12px;"><span class="dot"></span> SUBDOMAINS FOUND (${d.subdomains.length})</div>`;
+      html += `<table class="result-table">
+        <tr><th>Subdomain</th><th>IP</th></tr>
+        ${d.subdomains.map(s => `<tr>
+          <td style="color:var(--accent)">${escHtml(s.subdomain)}</td>
+          <td style="color:var(--dim)">${escHtml(s.ip)}</td>
+        </tr>`).join('')}
+      </table>`;
+    }
+
+    if (!types.length && (!d.subdomains || !d.subdomains.length)) {
+      html = `<div class="info-item">No DNS records found for <strong>${escHtml(target)}</strong>.</div>`;
+    }
+    out.innerHTML = html;
+  } catch(e) {
+    out.innerHTML = `<div class="terminal"><span class="t-err">Error: ${escHtml(e.message)}</span></div>`;
+  } finally { setLoading('dns-btn', false); }
+}
+
+// ── WHOIS ─────────────────────────────────────────────────────────────────────
+async function runWhois() {
+  const target = document.getElementById('whois-target').value.trim();
+  if (!target) return;
+  const out = document.getElementById('whois-result');
+  setLoading('whois-btn', true);
+  out.innerHTML = '<div class="terminal"><span class="t-info">Querying WHOIS...</span></div>';
+  try {
+    const [d, ok] = await apicall('/scan/whois', { target });
+    if (!ok) { out.innerHTML = `<div class="terminal"><span class="t-err">${escHtml(d.error)}</span></div>`; return; }
+    bumpStats('whois', { target });
+
+    const parsed = d.parsed;
+    let html = '';
+    if (Object.keys(parsed).length > 0) {
+      html += `<table class="result-table"><tr><th>Field</th><th>Value</th></tr>`;
+      Object.entries(parsed).forEach(([k,v]) => {
+        const val = Array.isArray(v) ? v.join(', ') : v;
+        html += `<tr><td style="color:var(--yellow)">${escHtml(k)}</td><td>${escHtml(val)}</td></tr>`;
+      });
+      html += '</table>';
+    } else {
+      html = `<div class="info-item">No structured WHOIS data parsed. See raw output below.</div>`;
+    }
+    html += rawBlock('whois-raw', d.raw);
+    out.innerHTML = html;
+  } catch(e) {
+    out.innerHTML = `<div class="terminal"><span class="t-err">Error: ${escHtml(e.message)}</span></div>`;
+  } finally { setLoading('whois-btn', false); }
+}
+
+// ── SSL ───────────────────────────────────────────────────────────────────────
+async function runSsl() {
+  const target = document.getElementById('ssl-target').value.trim();
+  const port   = document.getElementById('ssl-port').value || '443';
+  if (!target) return;
+  const out = document.getElementById('ssl-result');
+  setLoading('ssl-btn', true);
+  out.innerHTML = '<div class="terminal"><span class="t-info">Auditing SSL/TLS...</span></div>';
+  try {
+    const [d, ok] = await apicall('/scan/ssl', { target, port });
+    if (!ok) { out.innerHTML = `<div class="terminal"><span class="t-err">${escHtml(d.error)}</span></div>`; return; }
+    bumpStats('ssl', { target });
+
+    let html = '';
+    const cert = d.certificate;
+    if (Object.keys(cert).length > 0) {
+      html += `<div class="card-title"><span class="dot"></span> CERTIFICATE</div>
+      <table class="result-table">
+        <tr><th>Field</th><th>Value</th></tr>
+        ${Object.entries(cert).map(([k,v]) => `<tr>
+          <td style="color:var(--yellow)">${escHtml(k)}</td>
+          <td>${escHtml(v)}</td>
+        </tr>`).join('')}
+      </table>`;
+    }
+
+    if (d.warnings && d.warnings.length > 0) {
+      html += `<div class="card-title" style="margin-top:16px;"><span class="dot" style="background:var(--red)"></span> WARNINGS</div>`;
+      html += d.warnings.map(w => `<div class="vuln-item">⚠ ${escHtml(w)}</div>`).join('');
+    }
+
+    if (d.ciphers && d.ciphers.length > 0) {
+      html += `<div class="card-title" style="margin-top:16px;"><span class="dot"></span> CIPHER SUITES (sample)</div>`;
+      html += d.ciphers.slice(0,10).map(c => `<div class="info-item">${escHtml(c)}</div>`).join('');
+    }
+
+    if (!Object.keys(cert).length && (!d.warnings||!d.warnings.length)) {
+      html = `<div class="info-item">No SSL data found. Is port ${escHtml(port)} open with TLS?</div>`;
+    }
+    html += rawBlock('ssl-raw', d.raw);
+    out.innerHTML = html;
+  } catch(e) {
+    out.innerHTML = `<div class="terminal"><span class="t-err">Error: ${escHtml(e.message)}</span></div>`;
+  } finally { setLoading('ssl-btn', false); }
+}
+
+// ── OS ────────────────────────────────────────────────────────────────────────
+async function runOs() {
+  const target = document.getElementById('os-target').value.trim();
+  if (!target) return;
+  const out = document.getElementById('os-result');
+  setLoading('os-btn', true);
+  out.innerHTML = '<div class="terminal"><span class="t-info">Fingerprinting OS (requires root)...</span></div>';
+  try {
+    const [d, ok] = await apicall('/scan/os', { target });
+    if (!ok) { out.innerHTML = `<div class="terminal"><span class="t-err">${escHtml(d.error)}</span></div>`; return; }
+    bumpStats('os', { target, hosts: 1 });
+
+    let html = '';
+    if (d.device_type) {
+      html += `<div class="info-item" style="margin-bottom:8px;">Device Type: <strong>${escHtml(d.device_type)}</strong></div>`;
+    }
+    if (d.guesses && d.guesses.length > 0) {
+      html += `<table class="result-table">
+        <tr><th>OS</th><th>Confidence</th></tr>
+        ${d.guesses.map(g => `<tr>
+          <td style="color:var(--accent)">${escHtml(g.os)}</td>
+          <td>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div style="width:80px;height:6px;background:var(--border);border-radius:3px;overflow:hidden;">
+                <div style="width:${g.acc}%;height:100%;background:${g.acc>=80?'var(--green)':'var(--yellow)'};border-radius:3px;"></div>
+              </div>
+              <span style="color:var(--dim)">${g.acc}%</span>
+            </div>
+          </td>
+        </tr>`).join('')}
+      </table>`;
+    } else {
+      html = `<div class="info-item">OS detection inconclusive. Try as root for better results.</div>`;
+    }
+    html += rawBlock('os-raw', d.raw);
+    out.innerHTML = html;
+  } catch(e) {
+    out.innerHTML = `<div class="terminal"><span class="t-err">Error: ${escHtml(e.message)}</span></div>`;
+  } finally { setLoading('os-btn', false); }
+}
+
+// ── LOG ───────────────────────────────────────────────────────────────────────
+async function loadLog() {
+  const el = document.getElementById('log-content');
+  try {
+    const r = await fetch(`${API}/log`, { headers: {'X-Auth-Token': TOKEN} });
+    const d = await r.json();
+    if (!d.log || d.log.length === 0) {
+      el.innerHTML = '<span style="color:var(--dim)">No scans logged yet.</span>';
+      return;
+    }
+    el.innerHTML = d.log.map(e => `<div class="log-entry">
+      <span class="log-ts">${e.ts}</span>
+      <span class="log-user">${escHtml(e.user)}</span>
+      <span class="log-type">${escHtml(e.type)}</span>
+      <span class="log-tgt">${escHtml(e.target)}</span>
+    </div>`).join('');
+  } catch(e) {
+    el.innerHTML = `<span class="t-err">Cannot load log: ${escHtml(e.message)}</span>`;
+  }
+}
+</script>
+</body>
+</html>
