@@ -25,7 +25,7 @@ A private, self-hosted penetration testing dashboard backed by real `nmap` scans
 
 ```bash
 # 1. Clone or copy the repo
-git clone <your-repo-url> kali-toolkit
+git clone Juhair-yooo kali-toolkit
 cd kali-toolkit
 
 # 2. Install dependencies
